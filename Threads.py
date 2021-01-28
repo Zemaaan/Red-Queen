@@ -160,7 +160,7 @@ class CountDown(threading.Thread):
         self.CountDown(self.Convert(self.BrojSekundi))
         self.QueenCounterWindow.mainloop()
 
-def SpeechProcessing(responses, stream, WindowName):  # listen_print_loop
+def SpeechProcessing(responses, stream, WindowName):  # listen_print loop
     for response in responses:
         if get_current_time() - stream.start_time > STREAMING_LIMIT:
             stream.start_time = get_current_time()
