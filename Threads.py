@@ -9,7 +9,6 @@ from wit import Wit
 import Windows
 import threading
 from datetime import datetime, timedelta
-# from Miscellaneous import SoundThread, LockPC
 from random import randint
 
 # noinspection PyAttributeOutsideInit
@@ -20,6 +19,13 @@ Ime = 'Hrvoje'
 STREAMING_LIMIT = 240000  # 4 minutes
 SAMPLE_RATE = 16000
 CHUNK_SIZE = int(SAMPLE_RATE / 10)  # 100ms
+
+
+def TextProcessing(TekstZaObradu, QueenPrimaryWindow):
+    print("Pokrenuto")
+    NaturalLanguageProcessingThread = NaturalLanguageProcessing(TekstZaObradu, QueenPrimaryWindow)
+    NaturalLanguageProcessingThread.start()
+
 
 class GlavniProzor(threading.Thread):
     def __init__(self):
@@ -101,6 +107,10 @@ class GlavniProzor(threading.Thread):
         self.TextLabel.pack(fill="x", expand=True)
 
         self.UpdateTime()
+
+        TextInput = tkinter.Entry(font="Calibri 12")
+        TextInput.bind("<Enter>", print("Enter"))
+        TextInput.pack()
 
         self.QueenPrimaryWindow.config(menu=menubar)
         self.QueenPrimaryWindow.mainloop()
@@ -221,6 +231,7 @@ class NaturalLanguageProcessing(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
+        print(self.TekstZaObradu)
         client = Wit("L2SE6YQB54PDESGSR5S5HPCTXFEVB4A7")
         resp = client.message(self.TekstZaObradu)
         try:
