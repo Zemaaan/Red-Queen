@@ -1,14 +1,15 @@
+import subprocess
 import sys
 import time
 import tkinter
-
+import cv2
 from google.cloud import speech
+from playsound import playsound
 from wit import Wit
-
 import Windows
 import threading
 from datetime import datetime, timedelta
-from Miscellaneous import SoundThread, LockPC
+# from Miscellaneous import SoundThread, LockPC
 from random import randint
 
 # noinspection PyAttributeOutsideInit
@@ -19,7 +20,6 @@ Ime = 'Hrvoje'
 STREAMING_LIMIT = 240000  # 4 minutes
 SAMPLE_RATE = 16000
 CHUNK_SIZE = int(SAMPLE_RATE / 10)  # 100ms
-
 
 class GlavniProzor(threading.Thread):
     def __init__(self):
@@ -99,14 +99,6 @@ class GlavniProzor(threading.Thread):
 
         self.TextLabel = tkinter.Label(self.QueenPrimaryWindow, text="Početni tekst", highlightbackground="#000000")
         self.TextLabel.pack(fill="x", expand=True)
-
-        # TextBox = tkinter.Text(self.QueenPrimaryWindow, height=1, width=100, font=("Helvetica", 18))
-        # TextBox.bind('<Return>', callback)
-        # TextBox.pack()
-
-        # TextBox = tkinter.Entry(self.QueenPrimaryWindow, style='pad.TEntry', padding='5 1 1 1')
-        # TextBox.bind('<Return>', TextProcessing(TextBox.get(), self.QueenPrimaryWindow))
-        # TextBox.pack()
 
         self.UpdateTime()
 
@@ -245,6 +237,10 @@ class NaturalLanguageProcessing(threading.Thread):
                 BrojacProzor.start()
             elif UserIntent == 'NameCheck':
                 self.TargetWindow.SayIntermittently('Your name is %s' % Ime)
+            elif UserIntent == 'OpenCamera':
+                self.TargetWindow.SayIntermittently('Opening camera.')
+                CameraThread = OpenVideoFeed()
+                CameraThread.start()
         except IndexError:
             self.TargetWindow.SayIntermittently('I didn\'t quite understand that.')
 
@@ -270,6 +266,7 @@ class SpeechToText(threading.Thread):
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             sample_rate_hertz=SAMPLE_RATE,
             language_code="en-US",
+            enable_automatic_punctuation=True,
             max_alternatives=1
         )
         streaming_config = speech.StreamingRecognitionConfig(
@@ -309,3 +306,58 @@ class SpeechToText(threading.Thread):
 def get_current_time():
     """Return Current Time in MS."""
     return int(round(time.time() * 1000))
+
+
+class LockPC(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run(self):
+        cmd = 'rundll32.exe user32.dll, LockWorkStation'
+        subprocess.call(cmd)
+
+    def KillThread(self):
+        quit()
+
+
+class SoundThread(threading.Thread):
+    def __init__(self, SoundFilePath, ContniousLoop = False):
+        threading.Thread.__init__(self)
+        self.SoundFilePath = SoundFilePath
+        self.ContniousLoop = ContniousLoop
+    # def __del__(self):
+    def run(self):
+        if self.ContniousLoop:
+            while 1:
+                playsound(self.SoundFilePath)
+                time.sleep(0.8)
+        playsound(self.SoundFilePath)
+
+    def KillThread(self):
+        del self.SoundFilePath
+        del self.ContniousLoop
+        quit()
+
+class OpenVideoFeed(threading.Thread):
+
+    def run(self):
+        vid = cv2.VideoCapture(0)
+
+        while True:
+            # Capture the video frame
+            # by frame
+            ret, frame = vid.read()
+
+            # Display the resulting frame
+            cv2.imshow('frame', frame)
+
+            # the 'q' button is set as the
+            # quitting button you may use any
+            # desired button of your choice
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        # After the loop release the cap object
+        vid.release()
+        # Destroy all the windows
+        cv2.destroyAllWindows()
