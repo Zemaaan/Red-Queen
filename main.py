@@ -13,6 +13,7 @@ from PIL import ImageTk, Image
 from PIL.ImageTk import PhotoImage
 from google.cloud import speech
 from playsound import playsound
+import wikipedia
 from wit import Wit
 
 import Windows
@@ -33,8 +34,6 @@ USERNAME_CHECK_VALUE = 'Computer'
 
 ACTIVE_THREADS_LIST = []
 
-MicrophoneIsActive = True
-
 
 def get_current_time():
     """Return Current Time in MS."""
@@ -45,7 +44,6 @@ if path.exists('C:/Users/Hrvoje/Downloads/Crvena Kraljica-a019d8541cd9.json'):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/Hrvoje/Downloads/Crvena Kraljica-a019d8541cd9.json"
 else:
     print('Configuration file does not exist - the program will not work without it.')
-
 
 class GlavniProzor(threading.Thread):
     def __init__(self):
@@ -70,7 +68,7 @@ class GlavniProzor(threading.Thread):
         self.TextLabelBackgroundColorDark = self.MainWindowBackgroundDark  # Boja pozadine TextLabel - dark theme
         self.TextLabelBackgroundColor = self.MainWindowBackground  # Boja pozadine TextLabel
 
-        # self.MenuTextColor =
+        # najti kak se rece mikrofon, kamera, zaslon.
 
     def returnScreenWidth(self):
         return self.QueenPrimaryWindow.winfo_screenwidth()
@@ -199,30 +197,32 @@ class GlavniProzor(threading.Thread):
         # self.TimeLabel.pack(fill="both", expand=True)
         if self.UseDarkMode:
             self.TextLabel = tkinter.Label(self.QueenPrimaryWindow, bg=self.TextLabelBackgroundColorDark,
-                                           text="", fg=self.TextLabelDarkMode, highlightbackground="white")
-            self.TextLabel.pack(padx=1)
+                                           text="Red Queen v0.5", fg=self.TextLabelDarkMode,
+                                           highlightbackground="white")
+            self.TextLabel.pack(pady=screen_height / 2.5)
         else:
             self.TextLabel = tkinter.Label(self.QueenPrimaryWindow, bg=self.TextLabelBackgroundColor,
-                                           text="", fg=self.TextLabelColor, highlightbackground="white")
-            self.TextLabel.pack(padx=1)
+                                           text="Red Queen v0.5", fg=self.TextLabelColor, highlightbackground="white")
+            self.TextLabel.pack(pady=screen_height / 2.5)
         self.UpdateTime()
 
         # TextInput = tkinter.Entry(font="Calibri 12", bd=0, insertbackground='red')
         # TextInput.bind("<Return>", lambda event: TextProcessing(TextInput.get(), self.QueenPrimaryWindow).start())
         # TextInput.place(x=20, y=930, width=1800, height=40)
 
-        SlikaMikrofon = Image.open("Microphone.png")
-        SlikaMikrofon = SlikaMikrofon.resize((40, 40), Image.ANTIALIAS)
-        SlikaMikrofon = PhotoImage(SlikaMikrofon)
-        LabelSlikaMikrofon = tkinter.Label(self.QueenPrimaryWindow, image=SlikaMikrofon, height=40, width=40, bd=0)
-        LabelSlikaMikrofon.pack()
+        # SlikaMikrofon = Image.open("Microphone.png")
+        # SlikaMikrofon = SlikaMikrofon.resize((40, 40), Image.ANTIALIAS)
+        # SlikaMikrofon = PhotoImage(SlikaMikrofon)
+        # LabelSlikaMikrofon = tkinter.Label(self.QueenPrimaryWindow, image=SlikaMikrofon, height=40, width=40, bd=0)
+        # LabelSlikaMikrofon.pack()
         # LabelSlikaMikrofon.place(x=1850, y=930)
-        LabelSlikaMikrofon.bind("<Button-1>", lambda event: TTSThread.Switch())
+        # LabelSlikaMikrofon.bind("<Button-1>", lambda event: TTSThread.Switch())
         self.QueenPrimaryWindow.config(menu=menubar)
         self.QueenPrimaryWindow.mainloop()
 
     def KillThread(self):
         quit()
+
 
 class SpeechToText(threading.Thread):  # trazena dretva
 
@@ -243,7 +243,6 @@ class SpeechToText(threading.Thread):  # trazena dretva
         # self.__running.set()  # Set running to True
 
     def run(self):
-        global MicrophoneIsActive
         try:
             """start bidirectional streaming from microphone input to speech API"""
             client = speech.SpeechClient()
@@ -271,8 +270,7 @@ class SpeechToText(threading.Thread):  # trazena dretva
                     responses = client.streaming_recognize(streaming_config, requests)
 
                     # Now, put the transcription responses to use.
-                    if MicrophoneIsActive:
-                        SpeechProcessing(responses, stream, self.WindowName)
+                    SpeechProcessing(responses, stream, self.WindowName)
                     if stream.result_end_time > 0:
                         stream.final_request_end_time = stream.is_final_end_time
                     stream.result_end_time = 0
@@ -302,14 +300,14 @@ class SpeechToText(threading.Thread):  # trazena dretva
     #     self.__flag.set()  # Resume the thread from the suspended state, if it is already suspended
     #     self.__running.clear()  # Set to False
 
-    def Switch(self):
-        global MicrophoneIsActive
-        if MicrophoneIsActive:
-            MicrophoneIsActive = False
-            print("Turning microphone off.")
-        else:
-            MicrophoneIsActive = True
-            print("Turning microphone on.")
+    # def Switch(self):
+    #     global MicrophoneIsActive
+    #     if MicrophoneIsActive:
+    #         MicrophoneIsActive = False
+    #         print("Turning microphone off.")
+    #     else:
+    #         MicrophoneIsActive = True
+    #         print("Turning microphone on.")
 
     def KillThread(self):
         quit()
@@ -321,7 +319,6 @@ class SpeechToText(threading.Thread):  # trazena dretva
 if __name__ == '__main__':
     GUIDretva = GlavniProzor()
     TTSThread = SpeechToText(GUIDretva)
-
     GUIDretva.start()
     TTSThread.start()
 
@@ -372,94 +369,65 @@ class CountDown(threading.Thread):
 
 
 def SpeechProcessing(responses, stream, WindowName):  # listen_print loop
-    if MicrophoneIsActive:
-        for response in responses:
-            if get_current_time() - stream.start_time > STREAMING_LIMIT:
-                stream.start_time = get_current_time()
-                break
+    for response in responses:
+        if get_current_time() - stream.start_time > STREAMING_LIMIT:
+            stream.start_time = get_current_time()
+            break
 
-            if not response.results:
-                continue
+        if not response.results:
+            continue
 
-            result = response.results[0]
+        result = response.results[0]
 
-            if not result.alternatives:
-                continue
+        if not result.alternatives:
+            continue
 
-            transcript = result.alternatives[0].transcript
+        transcript = result.alternatives[0].transcript
 
-            result_seconds = 0
-            result_nanos = 0
+        result_seconds = 0
+        result_nanos = 0
 
-            if result.result_end_time.seconds:
-                result_seconds = result.result_end_time.seconds
+        if result.result_end_time.seconds:
+            result_seconds = result.result_end_time.seconds
 
-            if result.result_end_time.microseconds:
-                result_nanos = result.result_end_time.microseconds
+        if result.result_end_time.microseconds:
+            result_nanos = result.result_end_time.microseconds
 
-            stream.result_end_time = int((result_seconds * 1000) + (result_nanos / 1000000))
+        stream.result_end_time = int((result_seconds * 1000) + (result_nanos / 1000000))
 
-            corrected_time = (stream.result_end_time - stream.bridging_offset
-                              + (STREAMING_LIMIT * stream.restart_counter))
+        corrected_time = (stream.result_end_time - stream.bridging_offset
+                          + (STREAMING_LIMIT * stream.restart_counter))
 
-            # Display interim results, but with a carriage return at the end of the
-            # line, so subsequent lines will overwrite them.
+        # Display interim results, but with a carriage return at the end of the
+        # line, so subsequent lines will overwrite them.
 
-            if result.is_final:
-                if transcript == "lock" or transcript == "Lock":
-                    LockPCThread = LockPC()
-                    LockPCThread.start()
-                WindowName.PromjenaLabel(transcript + "\r", True)
-                NaturalLanguageProcessingDretva = NaturalLanguageProcessing(transcript, WindowName)
-                NaturalLanguageProcessingDretva.start()
-                PlaySound = SoundThread("WorkingRedQueen.mp3")
-                time.sleep(0.1)
-                PlaySound.start()
-                stream.is_final_end_time = stream.result_end_time
-                stream.last_transcript_was_final = True
+        if result.is_final:
+            WindowName.PromjenaLabel(transcript + "\r", True)
+            NaturalLanguageProcessingDretva = NaturalLanguageProcessing(transcript, WindowName)
+            NaturalLanguageProcessingDretva.start()
+            PlaySound = SoundThread("WorkingRedQueen.mp3")
+            time.sleep(0.1)
+            PlaySound.start()
+            stream.is_final_end_time = stream.result_end_time
+            stream.last_transcript_was_final = True
 
-            # Exit recognition if any of the transcribed phrases could be
-            # one of our keywords.
-            # if re.search(r'\b(exit|quit)\b', transcript, re.I):
-            #     sys.stdout.write('Exiting...\n')
-            #     stream.closed = True
-            #     break
-            else:
-                WindowName.PromjenaLabel(transcript + "\r")
-                sys.stdout.write(transcript + "\r")
-                stream.last_transcript_was_final = False
+        # Exit recognition if any of the transcribed phrases could be
+        # one of our keywords.
+        # if re.search(r'\b(exit|quit)\b', transcript, re.I):
+        #     sys.stdout.write('Exiting...\n')
+        #     stream.closed = True
+        #     break
+        else:
+            WindowName.PromjenaLabel(transcript + "\r")
+            sys.stdout.write(transcript + "\r")
+            stream.last_transcript_was_final = False
 
 
-class TextProcessing(threading.Thread):
-    def __init__(self, Tekst, WindowName):
-        self.Tekst = Tekst
-        self.WindowName = WindowName
-        threading.Thread.__init__(self)
-
-    def run(self):
-        print("Pokrenuta tekst dretva", type(self.WindowName))
-        client = Wit("L2SE6YQB54PDESGSR5S5HPCTXFEVB4A7")
-        resp = client.message(self.Tekst)
-        try:
-            UserIntent = resp['intents'][0]['name']
-            if UserIntent == 'FindInformation':
-                print(UserIntent)
-            elif UserIntent == 'LockComputer':
-                self.WindowName.SayIntermittentlyAdd('Locking the PC')
-                LockPCThread = LockPC()
-                LockPCThread.start()
-            elif UserIntent == 'CountDown':
-                TimeFrame = resp['entities']['wit$duration:duration'][0]['normalized']['value']
-                BrojacProzor = CountDown(TimeFrame)
-                BrojacProzor.start()
-            elif UserIntent == 'NameCheck':
-                self.WindowName.SayIntermittently('Your name is %s' % Ime)
-            elif UserIntent == 'OpenCamera':
-                self.WindowName.SayIntermittently('Opening camera.')
-                CameraThread = OpenVideoFeed()
-                CameraThread.start()
-        except IndexError:
-            self.WindowName.SayIntermittently('I didn\'t quite understand that.')
+def CloseCamera():
+    print("Camera")
+    for Thread in ACTIVE_THREADS_LIST:
+        if type(Thread) == OpenVideoFeed:
+            Thread.KillThread()
 
 
 class NaturalLanguageProcessing(threading.Thread):
@@ -475,15 +443,42 @@ class NaturalLanguageProcessing(threading.Thread):
         self.TargetWindow = WindowName
         threading.Thread.__init__(self)
 
-    def run(self):
+    def run(self):  # moja koda
         # print("Pokrenuta dretva", self.TekstZaObradu)
         client = Wit("L2SE6YQB54PDESGSR5S5HPCTXFEVB4A7")
         resp = client.message(self.TekstZaObradu)
         try:
             UserIntent = resp['intents'][0]['name']
             if UserIntent == 'FindInformation':
-                pass
-                # print(UserIntent)
+                # pass
+                SearchTerm = resp['entities']['SearchTerm:SearchTerm'][0]['value']
+                WikipediaSummary = wikipedia.summary(SearchTerm)
+                NewFile = open('C:/Users/Hrvoje/Desktop/' + SearchTerm + '.txt', 'a', encoding='utf-8')
+                NewFile.write(WikipediaSummary)
+                NewFile.close()
+                os.startfile('C:/Users/Hrvoje/Desktop/' + SearchTerm + '.txt')
+            elif UserIntent == 'LockComputer':
+                self.TargetWindow.SayIntermittentlyAdd('Locking the PC')
+                LockPCThread = LockPC()
+                LockPCThread.start()
+            elif UserIntent == 'CountDown':
+                TimeFrame = resp['entities']['wit$duration:duration'][0]['normalized']['value']
+                BrojacProzor = CountDown(TimeFrame)
+                BrojacProzor.start()
+            elif UserIntent == 'NameCheck':
+                self.TargetWindow.SayIntermittently('Your name is %s' % Ime)
+            elif UserIntent == 'OpenCamera':
+                self.TargetWindow.SayIntermittently('Opening camera.')
+                CameraThread = OpenVideoFeed()
+                ACTIVE_THREADS_LIST.append(CameraThread)
+                CameraThread.start()
+            elif UserIntent == 'CloseCamera':
+                CloseCamera()
+            elif UserIntent == 'FavoriteSong':
+                webbrowser.open('https://www.youtube.com/watch?v=wXP4D_hCfqw&list=RDwXP4D_hCfqw&start_radio=1')
+                # istraziti kaj je neko drugi napravil slicno tome kaj dejansko sam naredil,
+                # ali je želo drugi to naredil
+                # mentor isce v polju de radi, navdusljeni
             elif UserIntent == 'LockComputer':
                 self.TargetWindow.SayIntermittentlyAdd('Locking the PC')
                 LockPCThread = LockPC()
@@ -496,31 +491,29 @@ class NaturalLanguageProcessing(threading.Thread):
                 BrojacProzor.start()
             elif UserIntent == 'NameCheck':
                 self.TargetWindow.SayIntermittently('Your name is %s' % Ime)
-            elif UserIntent == 'OpenCamera':
-                self.TargetWindow.SayIntermittently('Opening camera.')
-                CameraThread = OpenVideoFeed()
-                ACTIVE_THREADS_LIST.append(CameraThread)
-                CameraThread.start()
             elif UserIntent == 'OpenNote':
-                IsEncrypted = resp['traits']['Encrypted'][0]['value']  # Either "True" or "False"
+                # IsEncrypted = resp['traits']['Encrypted'][0]['value']  # Either "True" or "False"
+                print(resp['entities']['FileName:FileName'])
+                FileName = resp['entities']['FileName:FileName'][0]['value']
                 # if(IsEncrypted == 'True'):
-            elif UserIntent == 'OpenNote':
-                IsEncrypted = resp['traits']['Encrypted'][0]['value']  # Either "True" or "False"
-                # if(IsEncrypted == 'True'):
-                self.TargetWindow.SayIntermittently('Opening camera.')
             elif UserIntent == 'TurnOnDarkMode':
                 self.TargetWindow.EnableDarkMode()
             elif UserIntent == 'TurnOffDarkMode':
                 self.TargetWindow.EnableLightMode()
             elif UserIntent == 'SearchImages':
+                print(resp)
                 SearchTerm = resp['entities']['SearchTerm:SearchTerm'][0]['value']
                 URL = 'https://www.google.com/search?q={}&tbm=isch'.format(SearchTerm.replace(' ', '+'))
+                print(SearchTerm)
                 webbrowser.open(URL)
                 # https://www.google.com/search?q=New+York&tbm=isch
             elif UserIntent == 'ShowInfo':
                 screen_width = self.TargetWindow.returnScreenWidth()
                 screen_height = self.TargetWindow.returnScreenHeight()
                 Windows.ShowSystemVersion(screen_width, screen_height)
+            elif UserIntent == 'OpenWit':
+                self.TargetWindow.SayIntermittently('Opening Wit language console.')
+                webbrowser.open("https://wit.ai/apps/709037316327811/understanding")
         except IndexError:
             self.TargetWindow.SayIntermittently('I didn\'t quite understand that.')
 
@@ -564,8 +557,8 @@ class OpenVideoFeed(threading.Thread):
 
     def run(self):
         vid = cv2.VideoCapture(0)
-
-        while True:
+        CameraRunning = True
+        while CameraRunning:
             # Capture the video frame
             # by frame
             ret, frame = vid.read()
@@ -583,6 +576,11 @@ class OpenVideoFeed(threading.Thread):
         vid.release()
         # Destroy all the windows
         cv2.destroyAllWindows()
+
+    def KillThread(self):
+        print("CamreKill")
+
+        quit()
 
 
 def KillAllThreads():
