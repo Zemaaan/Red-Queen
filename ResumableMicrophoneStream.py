@@ -19,8 +19,6 @@ STREAMING_LIMIT = 5  # 4 minutes
 SAMPLE_RATE = 16000
 CHUNK_SIZE = int(SAMPLE_RATE / 10)  # 100ms
 
-
-
 def get_current_time():
     """Return Current Time in MS."""
     return int(round(time.time() * 1000))
